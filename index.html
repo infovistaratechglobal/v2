@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Amazon Order Automation V2 — Executive Profitability Dashboard</title>
+    <meta name="description" content="V2 Amazon Order Automation and Profitability Intelligence Dashboard. Real-time carrier shipping, tax reconciliation, and cloud database sync.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/style.css">
+  </head>
+  <body>
+    <div id="app" class="app-container">
+
+      <!-- Sticky Top Header -->
+      <header class="top-header">
+        <div class="nav-container">
+          
+          <!-- Brand Logo & Store Selector -->
+          <div class="brand-section">
+            <div class="brand-logo-icon" id="brand-logo-icon">A</div>
+            <div class="brand-info">
+              <div class="brand-title-wrap">
+                <span class="brand-title">AMAZON AUTOMATION</span>
+                <span class="v2-badge">V2 PRO</span>
+              </div>
+              <div class="store-select-wrap">
+                <label for="store-selector" class="sr-only">Store</label>
+                <select id="store-selector" class="store-selector">
+                  <option value="ALL">All Stores (Consolidated)</option>
+                  <option value="WISEROUTLET" selected>WISEROUTLET</option>
+                  <option value="PORAN ENTERPRISES">PORAN ENTERPRISES</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Controls & Header Status -->
+          <div class="header-actions">
+            <!-- DB Status Indicator Button -->
+            <button id="db-status-btn" class="db-status-pill" title="Cloud Database: Connected">
+              <span class="status-dot" id="db-status-dot"></span>
+              <span id="db-status-text">Cloud Active</span>
+            </button>
+
+            <!-- Upload Master File Button -->
+            <button id="open-upload-modal-btn" class="btn btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <span>Upload Masterdata</span>
+            </button>
+
+            <!-- Export to Excel Button -->
+            <button id="export-excel-btn" class="btn btn-secondary" title="Export Current View to Excel">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Export</span>
+            </button>
+
+            <!-- Settings Button -->
+            <button id="open-settings-btn" class="btn btn-outline btn-sm" title="System Settings">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+            </button>
+
+            <!-- User Avatar & Identity -->
+            <div class="user-profile">
+              <div class="user-avatar-circle" id="user-avatar">A</div>
+              <span class="user-email-text" id="user-email">Admin</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Sync Status & Revert Banner Strip -->
+      <section class="sync-strip glass-panel" id="sync-strip">
+        <div class="sync-info">
+          <span class="sync-badge">DATA SYNC</span>
+          <span>Last Master Sync: <strong id="last-updated-ist" class="sync-time">Checking…</strong> (IST) | <strong id="last-updated-est" class="sync-time">--</strong> (EST)</span>
+          <span class="divider">|</span>
+          <span>Total Database Records: <strong id="total-db-count" class="sync-time">0</strong></span>
+        </div>
+        <div class="sync-actions">
+          <button id="revert-btn" class="btn btn-danger-ghost btn-sm hidden">↩ Revert Last Upload</button>
+          <button id="refresh-db-btn" class="btn btn-outline btn-sm">↻ Refresh</button>
+        </div>
+      </section>
+
+      <!-- Main Dashboard Container -->
+      <main class="main-content">
+
+        <!-- Controls Toolbar (Search, Date Range, Status Filters) -->
+        <section class="control-toolbar glass-panel">
+          <div class="toolbar-top-row">
+            <!-- Search Bar with Suggestions -->
+            <div class="search-box-wrapper">
+              <svg class="search-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="search-input" class="search-input" placeholder="Search by Amazon Order ID, SKU, or Product Name..." autocomplete="off">
+              <button id="search-clear-btn" class="search-clear-btn hidden" aria-label="Clear search">×</button>
+              <div id="search-suggestions" class="search-suggestions-dropdown hidden"></div>
+            </div>
+
+            <!-- Date Range Controls -->
+            <div class="date-range-box">
+              <label for="date-from">From</label>
+              <input type="date" id="date-from" class="date-input">
+              <label for="date-to">To</label>
+              <input type="date" id="date-to" class="date-input">
+              <button id="apply-dates-btn" class="btn btn-secondary btn-sm">Filter Dates</button>
+              <button id="reset-dates-btn" class="btn btn-outline btn-sm">Reset</button>
+            </div>
+          </div>
+
+          <div class="toolbar-bottom-row">
+            <!-- Time Window Quick Filters -->
+            <div class="filter-pills" id="time-filter-pills">
+              <button class="pill-btn active" data-time="all">All Time</button>
+              <button class="pill-btn" data-time="today">Today</button>
+              <button class="pill-btn" data-time="7days">Last 7 Days</button>
+              <button class="pill-btn" data-time="30days">Last 30 Days</button>
+              <button class="pill-btn" data-time="thisMonth">This Month</button>
+            </div>
+
+            <!-- Order Status Filter Pills -->
+            <div class="filter-pills" id="status-filter-pills">
+              <button class="pill-btn active" data-status="all">All Orders</button>
+              <button class="pill-btn" data-status="shipped">Shipped Only 🚚</button>
+              <button class="pill-btn" data-status="profit">Profitable 🟢</button>
+              <button class="pill-btn" data-status="loss">Losses 🔴</button>
+              <button class="pill-btn" data-status="cancelled">Cancelled ⚪</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- KPI Metric Summary Cards -->
+        <section class="kpi-grid">
+          <!-- Net Profit -->
+          <div class="kpi-card glass-panel highlight-profit" id="kpi-profit-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Total Net Profit</span>
+              <div class="kpi-icon-pill">📈</div>
+            </div>
+            <div class="kpi-val-row">
+              <span class="kpi-value profit-color" id="kpi-total-profit">$0.00</span>
+              <span class="kpi-badge badge-profit" id="kpi-profit-margin">+0.0%</span>
+            </div>
+            <div class="kpi-subtext">
+              <span>Formula: Grand Total − COGS − Shipping − Amazon Tax</span>
+            </div>
+          </div>
+
+          <!-- Total Grand Revenue -->
+          <div class="kpi-card glass-panel">
+            <div class="kpi-header">
+              <span class="kpi-title">Total Grand Revenue</span>
+              <div class="kpi-icon-pill">💰</div>
+            </div>
+            <div class="kpi-val-row">
+              <span class="kpi-value" id="kpi-total-revenue">$0.00</span>
+            </div>
+            <div class="kpi-subtext">
+              <span>Avg Order Value: <strong id="kpi-aov">$0.00</strong></span>
+            </div>
+          </div>
+
+          <!-- Shipped Orders Count -->
+          <div class="kpi-card glass-panel">
+            <div class="kpi-header">
+              <span class="kpi-title">Orders Processed</span>
+              <div class="kpi-icon-pill">📦</div>
+            </div>
+            <div class="kpi-val-row">
+              <span class="kpi-value" id="kpi-total-orders">0</span>
+              <span class="kpi-badge badge-neutral" id="kpi-shipped-ratio">0 Shipped</span>
+            </div>
+            <div class="kpi-subtext">
+              <span id="kpi-order-breakdown">0 Profitable • 0 Loss • 0 Cancelled</span>
+            </div>
+          </div>
+
+          <!-- Carrier Shipping Spent -->
+          <div class="kpi-card glass-panel">
+            <div class="kpi-header">
+              <span class="kpi-title">Carrier Shipping Spent</span>
+              <div class="kpi-icon-pill">🚚</div>
+            </div>
+            <div class="kpi-val-row">
+              <span class="kpi-value" id="kpi-total-shipping">$0.00</span>
+            </div>
+            <div class="kpi-subtext">
+              <span>Avg Shipping / Order: <strong id="kpi-avg-shipping">$0.00</strong></span>
+            </div>
+          </div>
+
+          <!-- Amazon Tax Collected -->
+          <div class="kpi-card glass-panel">
+            <div class="kpi-header">
+              <span class="kpi-title">Amazon Tax Fetched</span>
+              <div class="kpi-icon-pill">⚖️</div>
+            </div>
+            <div class="kpi-val-row">
+              <span class="kpi-value" id="kpi-total-tax">$0.00</span>
+            </div>
+            <div class="kpi-subtext">
+              <span>Reconciled across order packages</span>
+            </div>
+          </div>
+
+          <!-- Cost of Goods Sold (COGS) -->
+          <div class="kpi-card glass-panel">
+            <div class="kpi-header">
+              <span class="kpi-title">Total COGS (Item Costs)</span>
+              <div class="kpi-icon-pill">📉</div>
+            </div>
+            <div class="kpi-val-row">
+              <span class="kpi-value" id="kpi-total-cogs">$0.00</span>
+            </div>
+            <div class="kpi-subtext">
+              <span>Calculated as Cost Price × Quantity</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Interactive Charts Grid -->
+        <section class="charts-grid">
+          <!-- Timeline Financial Chart -->
+          <div class="chart-card glass-panel">
+            <div class="chart-header">
+              <div class="chart-title-wrap">
+                <h3>Daily Revenue vs. Net Profit</h3>
+                <p>Track cashflow trends and profitability dynamics over time</p>
+              </div>
+              <div class="chart-controls">
+                <button class="pill-btn active" id="chart-view-daily">Daily</button>
+                <button class="pill-btn" id="chart-view-cumulative">Cumulative</button>
+              </div>
+            </div>
+            <div class="chart-container-box">
+              <canvas id="timelineChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Cost & Revenue Distribution Doughnut -->
+          <div class="chart-card glass-panel">
+            <div class="chart-header">
+              <div class="chart-title-wrap">
+                <h3>Financial Distribution</h3>
+                <p>Where does every dollar go?</p>
+              </div>
+            </div>
+            <div class="chart-container-box">
+              <canvas id="breakdownChart"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <!-- Orders Explorer & Detailed Transaction Table -->
+        <section class="table-card glass-panel">
+          <div class="table-header-row">
+            <div class="table-title-group">
+              <h3>Order Ledger & Profitability Details</h3>
+              <p id="table-showing-text">Showing 0 orders</p>
+            </div>
+            <div class="table-actions">
+              <label for="rows-per-page" class="sr-only">Rows per page</label>
+              <select id="rows-per-page" class="store-selector">
+                <option value="15" selected>15 rows</option>
+                <option value="30">30 rows</option>
+                <option value="50">50 rows</option>
+                <option value="100">100 rows</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table" id="orders-table">
+              <thead>
+                <tr>
+                  <th data-sort="purchase_date">Date ↕</th>
+                  <th data-sort="order_id">Order ID ↕</th>
+                  <th data-sort="store_name">Store ↕</th>
+                  <th>Product Title & SKU</th>
+                  <th data-sort="quantity">Qty</th>
+                  <th data-sort="grand_total">Grand Total ↕</th>
+                  <th data-sort="total_cost">COGS ↕</th>
+                  <th data-sort="shipping_cost">Shipping ↕</th>
+                  <th data-sort="amazon_tax">Tax ↕</th>
+                  <th data-sort="profit_loss">Net Profit ↕</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="orders-tbody">
+                <!-- Dynamically Populated -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Table Pagination Footer -->
+          <div class="pagination-row">
+            <span id="pagination-info">Showing 0 to 0 of 0 records</span>
+            <div class="pagination-controls" id="pagination-buttons">
+              <!-- Dynamically generated page buttons -->
+            </div>
+          </div>
+        </section>
+
+      </main>
+
+      <!-- ====================================================================
+           MODAL: MASTER DATA UPLOADER
+           ==================================================================== -->
+      <div id="upload-modal" class="modal-backdrop hidden">
+        <div class="modal-dialog">
+          <div class="modal-header">
+            <h3>Upload Masterdata (V2 Format)</h3>
+            <button class="modal-close-btn" id="close-upload-modal-btn">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p style="font-size: 0.85rem; color: var(--text-muted);">
+              Upload your <code>Master_Orders.xlsx</code> or daily finalized orders sheet. The system will parse all V2 columns (Grand Total, Carrier Shipping, Amazon Tax, Item Costs, Profit/Loss) and update the cloud database.
+            </p>
+
+            <!-- Store Selector for Upload -->
+            <div>
+              <label class="input-label" for="upload-store-select">Target Store</label>
+              <select id="upload-store-select" class="form-input">
+                <option value="WISEROUTLET">WISEROUTLET</option>
+                <option value="PORAN ENTERPRISES">PORAN ENTERPRISES</option>
+              </select>
+            </div>
+
+            <!-- Drag & Drop Zone -->
+            <div class="dropzone-box" id="dropzone">
+              <input type="file" id="master-file-input" accept=".xlsx, .xls, .csv" class="hidden-file-input">
+              <div class="dropzone-icon">📁</div>
+              <div class="dropzone-title">Click to select or drag & drop Master Excel file</div>
+              <div class="dropzone-hint">Supports .xlsx, .xls, or .csv (Master_Orders.xlsx)</div>
+            </div>
+
+            <!-- File Preview Summary (Hidden until file selected) -->
+            <div id="upload-preview-section" class="upload-preview-box hidden">
+              <div style="font-weight: 600; font-size: 0.875rem; color: #fff;" id="preview-filename">File Loaded</div>
+              <div class="preview-stat-grid">
+                <div class="preview-stat">
+                  <div class="preview-stat-val" id="preview-total-rows">0</div>
+                  <div class="preview-stat-label">Total Rows</div>
+                </div>
+                <div class="preview-stat">
+                  <div class="preview-stat-val" id="preview-shipped-rows">0</div>
+                  <div class="preview-stat-label">Shipped</div>
+                </div>
+                <div class="preview-stat">
+                  <div class="preview-stat-val" id="preview-total-profit">$0.00</div>
+                  <div class="preview-stat-label">Net Profit</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Progress Bar during sync -->
+            <div id="upload-progress-wrap" class="hidden">
+              <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.4rem;">
+                <span id="upload-progress-text">Syncing to Database…</span>
+                <span id="upload-progress-pct">0%</span>
+              </div>
+              <div class="progress-container">
+                <div class="progress-bar-fill" id="upload-progress-bar"></div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancel-upload-btn">Cancel</button>
+            <button class="btn btn-primary" id="confirm-upload-btn" disabled>
+              <span>Save & Sync to Database</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================================
+           MODAL: SYSTEM & STORAGE SETTINGS
+           ==================================================================== -->
+      <div id="settings-modal" class="modal-backdrop hidden">
+        <div class="modal-dialog">
+          <div class="modal-header">
+            <h3>System & Storage Settings</h3>
+            <button class="modal-close-btn" id="close-settings-modal-btn">&times;</button>
+          </div>
+          <div class="modal-body" style="display: flex; flex-direction: column; gap: 1.25rem;">
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span style="font-weight: 600; font-size: 0.9rem;">Cloud Database</span>
+                <span class="db-status-pill" style="pointer-events: none;">
+                  <span class="status-dot"></span>
+                  <span>Active &amp; Connected</span>
+                </span>
+              </div>
+              <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0;">
+                Production cloud database is pre-configured and synchronizing in real-time.
+              </p>
+            </div>
+
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem;">
+              <span style="font-weight: 600; font-size: 0.9rem; display: block; margin-bottom: 0.35rem;">Browser Local Cache</span>
+              <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.85rem;">
+                Orders are stored in browser memory for instant loading. If you suspect outdated records, clear local cache to re-pull all data directly from the cloud.
+              </p>
+              <button class="btn btn-danger-ghost btn-sm" id="clear-cache-btn">Clear Local Cache</button>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancel-settings-btn">Close</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toast Notification Container -->
+      <div id="toast-container"></div>
+
+    </div>
+
+    <!-- Main Module Script -->
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
