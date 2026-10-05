@@ -145,9 +145,15 @@ function showToast(title, desc, type = 'info', duration = 4000) {
 // ==========================================================================
 // LOCAL STORAGE CACHE HELPERS
 // ==========================================================================
-const CACHE_KEY = 'v2_orders_cache_v2';
+const CACHE_KEY = 'v2_orders_cache_v3';
 const SYNC_TIME_KEY = 'v2_last_sync_timestamp';
 const UPLOAD_KEYS_KEY = 'v2_last_upload_keys';
+
+// Invalidate legacy unincremented cache versions
+try {
+  localStorage.removeItem('v2_orders_cache_v2');
+  localStorage.removeItem('v2_orders_cache');
+} catch (e) {}
 
 function saveOrdersToCache(orders) {
   try {
@@ -162,12 +168,12 @@ function loadOrdersFromCache() {
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) return normalizeOrders(parsed, { isRawUpload: false });
     }
-    return Array.isArray(initialData) ? initialData : [];
+    return Array.isArray(initialData) ? normalizeOrders(initialData, { isRawUpload: false }) : [];
   } catch (e) {
     console.error('Error loading cache:', e);
-    return Array.isArray(initialData) ? initialData : [];
+    return Array.isArray(initialData) ? normalizeOrders(initialData, { isRawUpload: false }) : [];
   }
 }
 
@@ -186,7 +192,7 @@ async function fetchOrdersFromDatabase() {
     if (error) throw error;
 
     if (data && Array.isArray(data)) {
-      allOrders = normalizeOrders(data);
+      allOrders = normalizeOrders(data, { isRawUpload: false });
       saveOrdersToCache(allOrders);
       updateDbStatus('online', 'Cloud Connected');
       renderLastSyncTime(new Date().toISOString());
@@ -246,7 +252,7 @@ function renderLastSyncTime(timestampStr) {
 }
 
 // ==========================================================================
-// DATA NORMALIZATION (Ensures V2 Strict Calculation)
+// DATA NORMALIZATION (Ensures V2 Strict Calculation with 5% Cost Increment)
 // ==========================================================================
 function parseNum(val) {
   if (val === null || val === undefined || val === '') return 0;
@@ -255,7 +261,23 @@ function parseNum(val) {
   return isNaN(n) ? 0 : n;
 }
 
-function normalizeOrders(rows) {
+function getVal(row, ...keys) {
+  for (const k of keys) {
+    if (row[k] !== undefined && row[k] !== null && row[k] !== '') {
+      return row[k];
+    }
+    const lowerKey = k.toLowerCase();
+    for (const rk of Object.keys(row)) {
+      if (rk.toLowerCase() === lowerKey && row[rk] !== undefined && row[rk] !== null && row[rk] !== '') {
+        return row[rk];
+      }
+    }
+  }
+  return 0;
+}
+
+function normalizeOrders(rows, options = {}) {
+  const { isRawUpload = false } = options;
   return rows
     .filter(r => (r.order_id || r['amazon-order-id'] || r['order-id']) && (r.sku || r['sku']))
     .filter(r => {
@@ -276,41 +298,52 @@ function normalizeOrders(rows) {
       const qty = parseInt(r.quantity || r['quantity'] || 1, 10) || 1;
       const itemPrice = parseNum(r.item_price || r['item-price'] || r.price);
       
-      // Cost price: unit cost from Wiser
-      const costPrice = parseNum(r.cost_price || r['cost price'] || r.cost);
-      
-      // Total cost: unit cost * quantity
-      const totalCostRaw = parseNum(r.total_cost || r['total cost']);
-      const totalCost = totalCostRaw > 0 ? totalCostRaw : (costPrice * qty);
+      // Cost price: unit cost from sheet / DB
+      const rawCostPrice = parseNum(getVal(r, 'cost_price', 'cost price', 'cost', 'Unit Cost'));
+      const rawTotalCost = parseNum(getVal(r, 'total_cost', 'total cost', 'Total Cost'));
+
+      let costPrice = rawCostPrice;
+      let totalCost = rawTotalCost;
+
+      if (isRawUpload) {
+        // 5% increment on what is uploaded in the sheet (e.g. 100 becomes 105)
+        costPrice = parseFloat((rawCostPrice * 1.05).toFixed(2));
+        totalCost = rawTotalCost > 0 
+          ? parseFloat((rawTotalCost * 1.05).toFixed(2)) 
+          : parseFloat((costPrice * qty).toFixed(2));
+      } else {
+        // From database or cache (already has 5% increment applied)
+        if (totalCost === 0 && costPrice > 0) {
+          totalCost = parseFloat((costPrice * qty).toFixed(2));
+        }
+      }
 
       // Grand total: if present use it, else default to itemPrice * quantity
-      const grandTotalRaw = parseNum(r.grand_total || r['grand total']);
-      const grandTotal = grandTotalRaw > 0 ? grandTotalRaw : (itemPrice * qty);
+      const grandTotalRaw = parseNum(getVal(r, 'grand_total', 'grand total', 'Grand Total'));
+      const grandTotal = grandTotalRaw > 0 ? grandTotalRaw : parseFloat((itemPrice * qty).toFixed(2));
 
       // Carrier shipping fetched
-      const shippingCost = parseNum(r.shipping_cost || r['fetched shipping'] || r['shipping-price']);
+      const shippingCost = parseNum(getVal(r, 'shipping_cost', 'fetched shipping', 'shipping-price', 'Carrier Shipping'));
 
       // Amazon tax
-      const amazonTax = parseNum(r.amazon_tax || r['amazon tax'] || r.tax);
-
-      // Strict V2 Profit/Loss formula:
-      // Profit = Grand Total - Total Cost - Shipping - Amazon Tax
-      let profitLoss = parseNum(r.profit_loss || r['profit/loss']);
-      if (profitLoss === 0 && grandTotal > 0) {
-        profitLoss = parseFloat((grandTotal - totalCost - shippingCost - amazonTax).toFixed(2));
-      }
+      const amazonTax = parseNum(getVal(r, 'amazon_tax', 'amazon tax', 'tax', 'Amazon Tax'));
 
       // Indicator / Status
       let rawStatus = String(r.order_status || r['order-status'] || r.indicator || r['indicator'] || '').trim();
-      const isShipped = rawStatus.toLowerCase().includes('shipped') || rawStatus === '' || rawStatus.includes('Profit') || rawStatus.includes('Loss');
-      
-      let indicator = String(r.indicator || r['indicator'] || '');
-      if (!indicator || indicator.toLowerCase().includes('shipped')) {
-        if (rawStatus.toLowerCase().includes('cancelled')) {
-          indicator = '⚪ Cancelled';
-        } else {
-          indicator = profitLoss >= 0 ? '🟢 Profit' : '🔴 Loss';
-        }
+      const isCancelled = rawStatus.toLowerCase().includes('cancelled') || String(r.indicator || '').toLowerCase().includes('cancelled');
+
+      // Strict V2 Profit/Loss formula (calculated AFTER 5% incremented cost):
+      // Profit = Grand Total - Total Cost - Shipping - Amazon Tax
+      let profitLoss = 0;
+      if (!isCancelled) {
+        profitLoss = parseFloat((grandTotal - totalCost - shippingCost - amazonTax).toFixed(2));
+      }
+
+      let indicator = '';
+      if (isCancelled) {
+        indicator = '⚪ Cancelled';
+      } else {
+        indicator = profitLoss >= 0 ? '🟢 Profit' : '🔴 Loss';
       }
 
       const storeName = String(r.store_name || currentStore || 'WISEROUTLET').trim().toUpperCase();
@@ -592,7 +625,7 @@ function renderCharts(orders) {
   breakdownChart = new Chart(breakdownCanvas, {
     type: 'doughnut',
     data: {
-      labels: ['COGS (Product Costs)', 'Carrier Shipping', 'Amazon Tax', 'Net Profit'],
+      labels: ['Cost (+5% Buffer)', 'Carrier Shipping', 'Amazon Tax', 'Net Profit'],
       datasets: [{
         data: [
           parseFloat(totalCogs.toFixed(2)),
@@ -704,7 +737,10 @@ function renderTable(orders) {
         </td>
         <td style="font-weight: 600;">${o.quantity}</td>
         <td style="font-weight: 700; color: #fff;">$${(o.grand_total || 0).toFixed(2)}</td>
-        <td style="color: var(--text-muted);">$${(o.total_cost || 0).toFixed(2)}</td>
+        <td style="color: var(--text-muted);" title="Total Cost: $${(o.total_cost || 0).toFixed(2)} (Unit Cost +5%: $${(o.cost_price || 0).toFixed(2)})">
+          <div>$${(o.total_cost || 0).toFixed(2)}</div>
+          ${o.quantity > 1 ? `<div style="font-size: 0.72rem; color: var(--text-dim);">$${(o.cost_price || 0).toFixed(2)} ea</div>` : ''}
+        </td>
         <td style="color: var(--warning);">$${(o.shipping_cost || 0).toFixed(2)}</td>
         <td style="color: var(--accent-cyan);">$${(o.amazon_tax || 0).toFixed(2)}</td>
         <td class="${profitClass}">${profitSign}$${(o.profit_loss || 0).toFixed(2)}</td>
@@ -1017,7 +1053,7 @@ function handleSelectedFile(file) {
       const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
 
       const targetStore = uploadStoreSelect.value;
-      const normalized = normalizeOrders(rawRows.map(r => ({ ...r, store_name: targetStore })));
+      const normalized = normalizeOrders(rawRows.map(r => ({ ...r, store_name: targetStore })), { isRawUpload: true });
 
       if (!normalized.length) {
         showToast('Parse Error', 'No valid order records found with Order ID and SKU.', 'error');
@@ -1192,6 +1228,7 @@ cancelSettingsBtn.addEventListener('click', () => settingsModal.classList.add('h
 clearCacheBtn.addEventListener('click', () => {
   if (confirm('Clear local cache? This will reset local data and re-fetch from the database.')) {
     localStorage.removeItem(CACHE_KEY);
+    localStorage.removeItem('v2_orders_cache_v2');
     localStorage.removeItem(UPLOAD_KEYS_KEY);
     localStorage.removeItem(SYNC_TIME_KEY);
     allOrders = [];
