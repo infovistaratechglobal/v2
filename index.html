@@ -158,7 +158,7 @@
               <span class="kpi-badge badge-profit" id="kpi-profit-margin">+0.0%</span>
             </div>
             <div class="kpi-subtext">
-              <span>Formula: Grand Total − Cost (+5%) − Shipping − Amazon Tax</span>
+              <span>Formula: Grand Total − Cost − Shipping − Amazon Tax</span>
             </div>
           </div>
 
@@ -222,14 +222,14 @@
           <!-- Cost of Goods Sold (COGS) -->
           <div class="kpi-card glass-panel">
             <div class="kpi-header">
-              <span class="kpi-title">Total Cost (+5%)</span>
+              <span class="kpi-title">Total Cost</span>
               <div class="kpi-icon-pill">📉</div>
             </div>
             <div class="kpi-val-row">
               <span class="kpi-value" id="kpi-total-cogs">$0.00</span>
             </div>
             <div class="kpi-subtext">
-              <span>Calculated as (Cost Price × 1.05) × Quantity</span>
+              <span>Calculated as Cost Price × Quantity</span>
             </div>
           </div>
         </section>
@@ -295,7 +295,7 @@
                   <th>Product Title & SKU</th>
                   <th data-sort="quantity">Qty</th>
                   <th data-sort="grand_total">Grand Total ↕</th>
-                  <th data-sort="total_cost">Cost (+5%) ↕</th>
+                  <th data-sort="total_cost">Cost ↕</th>
                   <th data-sort="shipping_cost">Shipping ↕</th>
                   <th data-sort="amazon_tax">Tax ↕</th>
                   <th data-sort="profit_loss">Net Profit ↕</th>
@@ -330,7 +330,7 @@
           </div>
           <div class="modal-body">
             <p style="font-size: 0.85rem; color: var(--text-muted);">
-              Upload your <code>Master_Orders.xlsx</code> or daily finalized orders sheet. The system will parse all V2 columns, apply a <strong>5% increment</strong> to product cost prices, and calculate net profits before updating the cloud database.
+              Upload your <code>Master_Orders.xlsx</code> or daily finalized orders sheet. The system will parse all V2 columns, calculate net profits, and update the cloud database.
             </p>
 
             <!-- Store Selector for Upload -->
