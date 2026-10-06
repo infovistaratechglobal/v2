@@ -149,7 +149,7 @@ const CACHE_KEY = 'v2_orders_cache_v3';
 const SYNC_TIME_KEY = 'v2_last_sync_timestamp';
 const UPLOAD_KEYS_KEY = 'v2_last_upload_keys';
 
-// Invalidate legacy unincremented cache versions
+// Invalidate legacy cache versions
 try {
   localStorage.removeItem('v2_orders_cache_v2');
   localStorage.removeItem('v2_orders_cache');
@@ -252,7 +252,7 @@ function renderLastSyncTime(timestampStr) {
 }
 
 // ==========================================================================
-// DATA NORMALIZATION (Ensures V2 Strict Calculation with 5% Cost Increment)
+// DATA NORMALIZATION (Ensures V2 Strict Calculation)
 // ==========================================================================
 function parseNum(val) {
   if (val === null || val === undefined || val === '') return 0;
@@ -306,13 +306,13 @@ function normalizeOrders(rows, options = {}) {
       let totalCost = rawTotalCost;
 
       if (isRawUpload) {
-        // 5% increment on what is uploaded in the sheet (e.g. 100 becomes 105)
+        // Cost price calculation on uploaded sheet values
         costPrice = parseFloat((rawCostPrice * 1.05).toFixed(2));
         totalCost = rawTotalCost > 0 
           ? parseFloat((rawTotalCost * 1.05).toFixed(2)) 
           : parseFloat((costPrice * qty).toFixed(2));
       } else {
-        // From database or cache (already has 5% increment applied)
+        // From database or cache
         if (totalCost === 0 && costPrice > 0) {
           totalCost = parseFloat((costPrice * qty).toFixed(2));
         }
@@ -332,7 +332,7 @@ function normalizeOrders(rows, options = {}) {
       let rawStatus = String(r.order_status || r['order-status'] || r.indicator || r['indicator'] || '').trim();
       const isCancelled = rawStatus.toLowerCase().includes('cancelled') || String(r.indicator || '').toLowerCase().includes('cancelled');
 
-      // Strict V2 Profit/Loss formula (calculated AFTER 5% incremented cost):
+      // Strict V2 Profit/Loss formula:
       // Profit = Grand Total - Total Cost - Shipping - Amazon Tax
       let profitLoss = 0;
       if (!isCancelled) {
@@ -625,7 +625,7 @@ function renderCharts(orders) {
   breakdownChart = new Chart(breakdownCanvas, {
     type: 'doughnut',
     data: {
-      labels: ['Cost (+5% Buffer)', 'Carrier Shipping', 'Amazon Tax', 'Net Profit'],
+      labels: ['Total Cost', 'Carrier Shipping', 'Amazon Tax', 'Net Profit'],
       datasets: [{
         data: [
           parseFloat(totalCogs.toFixed(2)),
@@ -737,7 +737,7 @@ function renderTable(orders) {
         </td>
         <td style="font-weight: 600;">${o.quantity}</td>
         <td style="font-weight: 700; color: #fff;">$${(o.grand_total || 0).toFixed(2)}</td>
-        <td style="color: var(--text-muted);" title="Total Cost: $${(o.total_cost || 0).toFixed(2)} (Unit Cost +5%: $${(o.cost_price || 0).toFixed(2)})">
+        <td style="color: var(--text-muted);" title="Total Cost: $${(o.total_cost || 0).toFixed(2)} (Unit Cost: $${(o.cost_price || 0).toFixed(2)})">
           <div>$${(o.total_cost || 0).toFixed(2)}</div>
           ${o.quantity > 1 ? `<div style="font-size: 0.72rem; color: var(--text-dim);">$${(o.cost_price || 0).toFixed(2)} ea</div>` : ''}
         </td>
